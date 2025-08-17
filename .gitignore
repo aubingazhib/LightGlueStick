@@ -1,0 +1,3 @@
+resources/weights/*
+!resources/weights/.gitkeep
+__pycache__/
