@@ -1,7 +1,7 @@
 import torch
 from sklearn.cluster import DBSCAN
 
-from ..utils import get_model
+from .utils import get_model
 from .base_model import BaseModel
 
 

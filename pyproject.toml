@@ -20,7 +20,7 @@ dynamic = ["dependencies"]
 dev = ["black==23.12.1", "flake8", "isort"]
 
 [tool.setuptools]
-packages = { find = { where = ["lightgluestick"] } }
+packages = ["lightgluestick"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}

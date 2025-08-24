@@ -12,10 +12,6 @@ from matplotlib import pyplot as plt
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 'mps', 'cpu'
 images = Path("resources/images")
 
-# extractor = SuperPoint({}).to(device)
-# matcher = LightGlueStick({"max_num_keypoints": 2048}).to(device)
-# line_detector = LSD({"max_num_lines": 250}).to(device)
-
 conf = {
         'name': 'two_view_pipeline',
         'use_lines': True,

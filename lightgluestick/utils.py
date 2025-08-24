@@ -131,5 +131,5 @@ def get_class(mod_name, base_path, BaseClass):
 
 
 def get_model(name):
-    from .models.base_model import BaseModel
-    return get_class('models.' + name, 'lightgluestick', BaseModel)
+    from .base_model import BaseModel
+    return get_class(name, 'lightgluestick', BaseModel)

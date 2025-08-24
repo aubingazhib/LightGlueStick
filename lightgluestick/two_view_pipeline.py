@@ -1,6 +1,6 @@
 from omegaconf import OmegaConf
 
-from ..utils import get_model
+from .utils import get_model
 from .base_model import BaseModel
 
 to_ctr = OmegaConf.to_container  # convert DictConfig to dict
