@@ -15,7 +15,21 @@ torch.backends.cudnn.deterministic = True
 ETH_EPS = 1e-8
 DEVICE="cuda" if torch.cuda.is_available() else "cpu"
 
-@torch.amp.custom_fwd(cast_inputs=torch.float32, device_type=DEVICE)
+if hasattr(torch, "amp") and hasattr(torch.amp, "custom_fwd"):
+    try:
+        # Newer PyTorch: device_type supported
+        def AMP_CUSTOM_FWD_F32(func):
+            return torch.amp.custom_fwd(cast_inputs=torch.float32, device_type=DEVICE)(func)
+    except TypeError:
+        # Older PyTorch: no device_type argument
+        def AMP_CUSTOM_FWD_F32(func):
+            return torch.amp.custom_fwd(cast_inputs=torch.float32)(func)
+else:
+    # Fallback to legacy torch.cuda.amp
+    def AMP_CUSTOM_FWD_F32(func):
+        return torch.cuda.amp.custom_fwd(cast_inputs=torch.float32)(func)
+
+@AMP_CUSTOM_FWD_F32
 def normalize_keypoints(
         kpts: torch.Tensor, size: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
