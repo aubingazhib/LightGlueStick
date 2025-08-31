@@ -294,7 +294,6 @@ class TransformerLayer(nn.Module):
             mask0: Optional[torch.Tensor] = None,
             mask1: Optional[torch.Tensor] = None,
     ):
-        global line_time
         desc0 = self.self_attn(desc0, encoding0)
         desc1 = self.self_attn(desc1, encoding1)
 
@@ -454,15 +453,11 @@ class LightGlueStick(BaseModel):
         "n_layers": 9,
         "num_heads": 4,
         "flash": True,  # enable FlashAttention if available.
-        "mp": False,  # enable mixed precision
         "depth_confidence": -1,  # early stopping, disable with -1
         "width_confidence": -1,  # point pruning, disable with -1
         "filter_threshold": 0.1,  # match threshold
-        "checkpointed": False,
         "weights": None,  # either a path or the name of pretrained weights (disk, ...)
-        "keypoint_encoder": [32, 64, 128, 256],
-        "weights_from_version": "v0.1_arxiv",
-        "num_lines": 600,
+        "max_num_lines": 600,
         "loss": {
             "gamma": 1.0,
             "fn": "nll",
@@ -520,25 +515,26 @@ class LightGlueStick(BaseModel):
             ),
         )
 
-        self.eye_mask = torch.eye(self.conf.num_lines * 2, dtype=torch.float32).unsqueeze(0).to(DEVICE)
+        self.eye_mask = torch.eye(self.conf.max_num_lines * 2, dtype=torch.float32).unsqueeze(0).to(DEVICE)
         state_dict = None
 
         if conf.weights is not None:
-            # weights can be either a path or an existing file from official LG
-            if Path(conf.weights).exists():
-                state_dict = torch.load(conf.weights, map_location="cpu")
+            weights_path = Path(conf.weights)
+            if weights_path.exists() and weights_path.is_file():
+                # Load directly from provided weight file
+                state_dict = torch.load(str(weights_path), map_location="cpu")
             else:
-                path = Path(__file__).parent
-                path = path / "resources" / "weights/{}.pth".format(self.conf.weights)
-                
-                if path.exists():
-                    state_dict = torch.load(str(path), map_location="cpu")
-                else:
-                    state_dict = torch.hub.load_state_dict_from_url(self.url, path)
+                # Download into default torch cache (~/.cache/torch/hub/checkpoints)
+                state_dict = torch.hub.load_state_dict_from_url(
+                    self.url,
+                    map_location="cpu"
+                )
         else:
-            path = Path(__file__).parent.parent
-            path = path / "resources" / "weights"
-            state_dict = torch.hub.load_state_dict_from_url(self.url, path, map_location="cpu")
+            # No weights provided -> use default torch cache
+            state_dict = torch.hub.load_state_dict_from_url(
+                self.url,
+                map_location="cpu"
+            )
 
         if state_dict:
             state_dict = state_dict["model"]

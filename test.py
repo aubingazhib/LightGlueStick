@@ -39,7 +39,6 @@ conf = {
         },
         'matcher': {
             'name': 'lightgluestick',
-            'weights': 'resources/weights/lightgluestick.tar',
             'trainable': False,
         },
         'ground_truth': {

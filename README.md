@@ -11,9 +11,9 @@
 
 
 <div align="center">
-  <img src="resources/images/viz_4th_layer_exit_lines.png" alt="4th Layer Exit Lines" width="700">
+  <img src="assets/viz_4th_layer_exit_lines.png" alt="4th Layer Exit Lines" width="700">
   <br>
-  <img src="resources/images/viz_7th_layer_exit_lines.png" alt="7th Layer Exit Lines" width="700">
+  <img src="assets/viz_7th_layer_exit_lines.png" alt="7th Layer Exit Lines" width="700">
 </div>
 
 <div align="center" style="max-width:800px; margin:auto;">
