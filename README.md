@@ -19,3 +19,11 @@
 <div align="center" style="max-width:800px; margin:auto;">
   <i>LightGlueStick adaptively adjusts its depth based on image difficulty, exiting after the 4th layer for the top image pair (easy) and the 7th layer for the bottom pair (hard). These pairs are processed in just 27ms and 42ms, respectively.</i>
 </div>
+
+## Training 🏋️
+The training code is available in a separate repository, [GlueFactory](https://github.com/cvg/glue-factory). Within GlueFactory, you can not only train LightGlueStick, but also other deep matchers such as [LightGlue](https://github.com/cvg/LightGlue) and [GlueStick](https://github.com/cvg/GlueStick), use multiple feature extractors, line extractors, robust estimators, as well as run evaluations on multiple benchmarks.
+
+## Licence 📜
+Our code is licenced under [Apache-2.0 license](https://github.com/aubingazhib/LightGlueStick/blob/main/LICENSE).
+However, bear in mind that it uses a SuperPoint backbone that has a 
+[non-commercial licence](https://github.com/magicleap/SuperPointPretrainedNetwork/blob/master/LICENSE). Therefore, the overall system is non-commercial 😞.
