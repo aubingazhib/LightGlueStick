@@ -50,7 +50,7 @@ Please consider citing the following papers if you found this code useful:
 
 ```bibtex
 @InProceedings{Ubingazhibov_2025_ICCV,
-    author    = {Ubingazhibov, Aidyn and Pautrat, R{\'e}mi and Su{\'a}rez, Iago and Liu, Shaohui and Pollefeys, Marc and Larsson, Viktor},
+    author    = {Ubingazhibov, Aidyn and Pautrat, Rémi and Suárez, Iago and Liu, Shaohui and Pollefeys, Marc and Larsson, Viktor},
     title     = {LightGlueStick: a Fast and Robust Glue for Joint Point-Line Matching},
     booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) Workshops},
     month     = {October},
