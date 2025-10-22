@@ -1,5 +1,5 @@
 build
-numpy
+numpy<2
 matplotlib
 scipy
 scikit_learn
