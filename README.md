@@ -44,3 +44,17 @@ The training code is available in a separate repository, [GlueFactory](https://g
 Our code is licenced under [Apache-2.0 license](https://github.com/aubingazhib/LightGlueStick/blob/main/LICENSE).
 However, bear in mind that it uses a SuperPoint backbone that has a 
 [non-commercial licence](https://github.com/magicleap/SuperPointPretrainedNetwork/blob/master/LICENSE). Therefore, the overall system is non-commercial 😞.
+
+## BibTeX Citation
+Please consider citing the following papers if you found this code useful:
+
+```bibtex
+@InProceedings{Ubingazhibov_2025_ICCV,
+    author    = {Ubingazhibov, Aidyn and Pautrat, R{\'e}mi and Su{\'a}rez, Iago and Liu, Shaohui and Pollefeys, Marc and Larsson, Viktor},
+    title     = {LightGlueStick: a Fast and Robust Glue for Joint Point-Line Matching},
+    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) Workshops},
+    month     = {October},
+    year      = {2025},
+    pages     = {7244-7254}
+}
+```
