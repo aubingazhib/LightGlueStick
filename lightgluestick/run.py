@@ -20,6 +20,7 @@ def main():
     parser.add_argument('-img2', default=join('resources' + os.path.sep + 'img2.jpg'))
     parser.add_argument('--max_pts', type=int, default=1000)
     parser.add_argument('--max_lines', type=int, default=300)
+    parser.add_argument('--depth_confidence', type=float, default=-1.0)
     parser.add_argument('--skip-imshow', default=False, action='store_true')
     args = parser.parse_args()
 
@@ -51,6 +52,7 @@ def main():
         },
         'matcher': {
             'name': 'lightgluestick',
+            'depth_confidence': args.depth_confidence,
             'trainable': False,
         },
         'ground_truth': {
@@ -76,6 +78,9 @@ def main():
 
     line_seg0, line_seg1 = pred["lines0"], pred["lines1"]
     line_matches = pred["line_matches0"]
+
+    if args.depth_confidence >= 0:
+        print(f"Early exit layer: {pred['early_exit_layer_idx']}")
 
     valid_matches = m0 != -1
     match_indices = m0[valid_matches]
