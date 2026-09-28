@@ -13,6 +13,7 @@ import torch.nn as nn
 
 from .base_model import BaseModel
 
+
 def sample_descriptors(keypoints, descriptors, s: int = 8):
     """Interpolate descriptors at keypoint locations"""
     b, c, h, w = descriptors.shape

@@ -1,12 +1,10 @@
-from pathlib import Path
 import collections.abc as collections
+from pathlib import Path
+from typing import Callable, List, Optional, Union
 
 import cv2
 import numpy as np
 import torch
-from typing import Callable, List, Optional, Union
-
-from typing import List, Optional, Union
 
 
 def resize_image(
@@ -60,11 +58,13 @@ def numpy_image_to_torch(image: np.ndarray) -> torch.Tensor:
         raise ValueError(f"Not an image: {image.shape}")
     return torch.tensor(image / 255.0, dtype=torch.float)
 
+
 def load_image(path: Path, resize: int = None, **kwargs) -> torch.Tensor:
     image = read_image(path)
     if resize is not None:
         image, _ = resize_image(image, resize, **kwargs)
     return numpy_image_to_torch(image)
+
 
 def map_tensor(input_, func: Callable):
     string_classes = (str, bytes)
@@ -78,7 +78,8 @@ def map_tensor(input_, func: Callable):
         return func(input_)
     else:
         return input_
-    
+
+
 def batch_to_device(batch: dict, device: str = "cpu", non_blocking: bool = True):
     """Move batch (dict) to device"""
 
@@ -87,12 +88,14 @@ def batch_to_device(batch: dict, device: str = "cpu", non_blocking: bool = True)
 
     return map_tensor(batch, _func)
 
+
 def rbd(data: dict) -> dict:
     """Remove batch dimension from elements in data"""
     return {
         k: v[0] if isinstance(v, (torch.Tensor, np.ndarray, list)) else v
         for k, v in data.items()
     }
+
 
 def match_pair_kpts(
     extractor,
@@ -111,16 +114,19 @@ def match_pair_kpts(
     feats0, feats1, matches01 = [batch_to_device(rbd(x), device) for x in data]
     return feats0, feats1, matches01
 
+
 def batch_to_np(batch):
     return map_tensor(batch, lambda t: t.detach().cpu().numpy()[0])
 
+
 def get_class(mod_name, base_path, BaseClass):
     """Get the class object which inherits from BaseClass and is defined in
-       the module named mod_name, child of base_path.
+    the module named mod_name, child of base_path.
     """
     import inspect
-    mod_path = '{}.{}'.format(base_path, mod_name)
-    mod = __import__(mod_path, fromlist=[''])
+
+    mod_path = "{}.{}".format(base_path, mod_name)
+    mod = __import__(mod_path, fromlist=[""])
     classes = inspect.getmembers(mod, inspect.isclass)
     # Filter classes defined in the module
     classes = [c for c in classes if c[1].__module__ == mod_path]
@@ -132,4 +138,5 @@ def get_class(mod_name, base_path, BaseClass):
 
 def get_model(name):
     from .base_model import BaseModel
-    return get_class(name, 'lightgluestick', BaseModel)
+
+    return get_class(name, "lightgluestick", BaseModel)
