@@ -7,31 +7,37 @@ import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torch import nn
+
 from .base_model import BaseModel
 
 FLASH_AVAILABLE = hasattr(F, "scaled_dot_product_attention")
 
 torch.backends.cudnn.deterministic = True
 ETH_EPS = 1e-8
-DEVICE="cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 if hasattr(torch, "amp") and hasattr(torch.amp, "custom_fwd"):
     try:
         # Newer PyTorch: device_type supported
         def AMP_CUSTOM_FWD_F32(func):
-            return torch.amp.custom_fwd(cast_inputs=torch.float32, device_type=DEVICE)(func)
+            return torch.amp.custom_fwd(cast_inputs=torch.float32, device_type=DEVICE)(
+                func
+            )
+
     except TypeError:
         # Older PyTorch: no device_type argument
         def AMP_CUSTOM_FWD_F32(func):
             return torch.amp.custom_fwd(cast_inputs=torch.float32)(func)
+
 else:
     # Fallback to legacy torch.cuda.amp
     def AMP_CUSTOM_FWD_F32(func):
         return torch.cuda.amp.custom_fwd(cast_inputs=torch.float32)(func)
 
+
 @AMP_CUSTOM_FWD_F32
 def normalize_keypoints(
-        kpts: torch.Tensor, size: Optional[torch.Tensor] = None
+    kpts: torch.Tensor, size: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
     if size is None:
         size = 1 + kpts.max(-2).values - kpts.min(-2).values
@@ -57,7 +63,7 @@ def apply_cached_rotary_emb(freqs: torch.Tensor, t: torch.Tensor) -> torch.Tenso
 def create_mask(lines_junc_idx, eye_mask, num_nodes):
     # Get batch size and number of connections
     bs = lines_junc_idx.shape[0]
-    mask = eye_mask[:, : num_nodes, : num_nodes].clone()
+    mask = eye_mask[:, :num_nodes, :num_nodes].clone()
     # Extract the start and end nodes
     start_nodes = lines_junc_idx[:, 0::2]  # Even indexed nodes
     end_nodes = lines_junc_idx[:, 1::2]  # Odd indexed nodes
@@ -75,7 +81,7 @@ class LearnableFourierPositionalEncoding(nn.Module):
         F_dim = F_dim if F_dim is not None else dim
         self.gamma = gamma
         self.Wr = nn.Linear(M, F_dim // 2, bias=False)
-        nn.init.normal_(self.Wr.weight.data, mean=0, std=self.gamma ** -2)
+        nn.init.normal_(self.Wr.weight.data, mean=0, std=self.gamma**-2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """encode position vector"""
@@ -103,15 +109,15 @@ class TokenConfidence(nn.Module):
         logit1 = self.token[0](desc1.detach()).squeeze(-1)
         la_now, la_final = la_now.detach(), la_final.detach()
         correct0 = (
-                la_final[:, :-1, :].max(-1).indices == la_now[:, :-1, :].max(-1).indices
+            la_final[:, :-1, :].max(-1).indices == la_now[:, :-1, :].max(-1).indices
         )
         correct1 = (
-                la_final[:, :, :-1].max(-2).indices == la_now[:, :, :-1].max(-2).indices
+            la_final[:, :, :-1].max(-2).indices == la_now[:, :, :-1].max(-2).indices
         )
         return (
-                       self.loss_fn(logit0, correct0.float()).mean(-1)
-                       + self.loss_fn(logit1, correct1.float()).mean(-1)
-               ) / 2.0
+            self.loss_fn(logit0, correct0.float()).mean(-1)
+            + self.loss_fn(logit1, correct1.float()).mean(-1)
+        ) / 2.0
 
 
 class Attention(nn.Module):
@@ -150,7 +156,7 @@ class Attention(nn.Module):
 
 class SelfBlock(nn.Module):
     def __init__(
-            self, embed_dim: int, num_heads: int, flash: bool = False, bias: bool = True
+        self, embed_dim: int, num_heads: int, flash: bool = False, bias: bool = True
     ) -> None:
         super().__init__()
         self.embed_dim = embed_dim
@@ -168,10 +174,10 @@ class SelfBlock(nn.Module):
         )
 
     def forward(
-            self,
-            x: torch.Tensor,
-            encoding: torch.Tensor,
-            mask: Optional[torch.Tensor] = None,
+        self,
+        x: torch.Tensor,
+        encoding: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         qkv = self.Wqkv(x)
         qkv = qkv.unflatten(-1, (self.num_heads, -1, 3)).transpose(1, 2)
@@ -185,7 +191,7 @@ class SelfBlock(nn.Module):
 
 class LineLayer(nn.Module):
     def __init__(
-            self, embed_dim: int, num_heads: int, flash: bool = False, bias: bool = True
+        self, embed_dim: int, num_heads: int, flash: bool = False, bias: bool = True
     ) -> None:
         super().__init__()
         self.embed_dim = embed_dim
@@ -203,11 +209,10 @@ class LineLayer(nn.Module):
         )
 
     def forward(
-            self,
-            x: torch.Tensor,
-            encoding: torch.Tensor,
-            mask: Optional[torch.Tensor] = None,
-
+        self,
+        x: torch.Tensor,
+        encoding: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         qkv = self.Wqkv(x)
         qkv = qkv.unflatten(-1, (self.num_heads, -1, 3)).transpose(1, 2)
@@ -222,12 +227,12 @@ class LineLayer(nn.Module):
 
 class CrossBlock(nn.Module):
     def __init__(
-            self, embed_dim: int, num_heads: int, flash: bool = False, bias: bool = True
+        self, embed_dim: int, num_heads: int, flash: bool = False, bias: bool = True
     ) -> None:
         super().__init__()
         self.heads = num_heads
         dim_head = embed_dim // num_heads
-        self.scale = dim_head ** -0.5
+        self.scale = dim_head**-0.5
         inner_dim = dim_head * num_heads
         self.to_qk = nn.Linear(embed_dim, inner_dim, bias=bias)
         self.to_v = nn.Linear(embed_dim, inner_dim, bias=bias)
@@ -247,7 +252,7 @@ class CrossBlock(nn.Module):
         return func(x0), func(x1)
 
     def forward(
-            self, x0: torch.Tensor, x1: torch.Tensor, mask: Optional[torch.Tensor] = None
+        self, x0: torch.Tensor, x1: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> List[torch.Tensor]:
         qk0, qk1 = self.map_(self.to_qk, x0, x1)
         v0, v1 = self.map_(self.to_v, x0, x1)
@@ -261,7 +266,7 @@ class CrossBlock(nn.Module):
                 qk1, qk0, v0, mask.transpose(-1, -2) if mask is not None else None
             )
         else:
-            qk0, qk1 = qk0 * self.scale ** 0.5, qk1 * self.scale ** 0.5
+            qk0, qk1 = qk0 * self.scale**0.5, qk1 * self.scale**0.5
             sim = torch.einsum("bhid, bhjd -> bhij", qk0, qk1)
             if mask is not None:
                 sim = sim.masked_fill(~mask, -float("inf"))
@@ -286,13 +291,13 @@ class TransformerLayer(nn.Module):
         self.cross_attn = CrossBlock(*args, **kwargs)
 
     def forward(
-            self,
-            desc0,
-            desc1,
-            encoding0,
-            encoding1,
-            mask0: Optional[torch.Tensor] = None,
-            mask1: Optional[torch.Tensor] = None,
+        self,
+        desc0,
+        desc1,
+        encoding0,
+        encoding1,
+        mask0: Optional[torch.Tensor] = None,
+        mask1: Optional[torch.Tensor] = None,
     ):
         desc0 = self.self_attn(desc0, encoding0)
         desc1 = self.self_attn(desc1, encoding1)
@@ -300,16 +305,18 @@ class TransformerLayer(nn.Module):
         n_endpoints0 = mask0.shape[-1]
         n_endpoints1 = mask1.shape[-1]
 
-        desc0[:, : n_endpoints0, :] = self.line_layer(desc0[:, : n_endpoints0, :], \
-                                                      encoding0[:, :, :, : n_endpoints0, :], mask0)
-        desc1[:, : n_endpoints1, :] = self.line_layer(desc1[:, : n_endpoints1, :], \
-                                                      encoding1[:, :, :, : n_endpoints1, :], mask1)
+        desc0[:, :n_endpoints0, :] = self.line_layer(
+            desc0[:, :n_endpoints0, :], encoding0[:, :, :, :n_endpoints0, :], mask0
+        )
+        desc1[:, :n_endpoints1, :] = self.line_layer(
+            desc1[:, :n_endpoints1, :], encoding1[:, :, :, :n_endpoints1, :], mask1
+        )
 
         return self.cross_attn(desc0, desc1)
 
 
 def sigmoid_log_double_softmax(
-        sim: torch.Tensor, z0: torch.Tensor, z1: torch.Tensor
+    sim: torch.Tensor, z0: torch.Tensor, z1: torch.Tensor
 ) -> torch.Tensor:
     """create the log assignment matrix from logits and similarity"""
     b, m, n = sim.shape
@@ -322,8 +329,9 @@ def sigmoid_log_double_softmax(
     scores[:, -1, :-1] = F.logsigmoid(-z1.squeeze(-1))
     return scores
 
+
 def sigmoid_log_double_softmax_kpts(
-        sim: torch.Tensor, z0: torch.Tensor, z1: torch.Tensor
+    sim: torch.Tensor, z0: torch.Tensor, z1: torch.Tensor
 ) -> torch.Tensor:
     """create the log assignment matrix from logits and similarity"""
     b, m, n = sim.shape
@@ -347,7 +355,7 @@ class MatchAssignment(nn.Module):
         self.final_proj_line = nn.Linear(dim, dim, bias=True)
 
     def get_line_assignment(
-            self, ldesc0, ldesc1, lines_junc_idx0, lines_junc_idx1, z0, z1
+        self, ldesc0, ldesc1, lines_junc_idx0, lines_junc_idx1, z0, z1
     ):
         mldesc0 = self.final_proj_line(ldesc0).mT
         mldesc1 = self.final_proj_line(ldesc1).mT
@@ -355,7 +363,7 @@ class MatchAssignment(nn.Module):
         _, d, _ = mldesc0.shape
 
         line_scores = torch.einsum("bdn,bdm->bnm", mldesc0, mldesc1)
-        line_scores = line_scores / d ** 0.5
+        line_scores = line_scores / d**0.5
 
         # Get the line representation from the junction descriptors
         n2_lines0 = lines_junc_idx0.shape[1]
@@ -392,12 +400,17 @@ class MatchAssignment(nn.Module):
             raw_line_scores,
         )
 
-    def forward(self, desc0: torch.Tensor, desc1: torch.Tensor, lines_junc_idx0: torch.Tensor,
-                lines_junc_idx1: torch.Tensor):
+    def forward(
+        self,
+        desc0: torch.Tensor,
+        desc1: torch.Tensor,
+        lines_junc_idx0: torch.Tensor,
+        lines_junc_idx1: torch.Tensor,
+    ):
         """build assignment matrix from descriptors"""
         mdesc0, mdesc1 = self.final_proj(desc0), self.final_proj(desc1)
         _, _, d = mdesc0.shape
-        mdesc0, mdesc1 = mdesc0 / d ** 0.25, mdesc1 / d ** 0.25
+        mdesc0, mdesc1 = mdesc0 / d**0.25, mdesc1 / d**0.25
         sim = torch.einsum("bmd,bnd->bmn", mdesc0, mdesc1)
         z0 = self.matchability(desc0)
         z1 = self.matchability(desc1)
@@ -405,8 +418,11 @@ class MatchAssignment(nn.Module):
         # n_endpoints0 = lines_junc_idx0.max()
         # n_endpoints1 = lines_junc_idx1.max()
 
-        #scores = sigmoid_log_double_softmax_kpts(sim[:, n_endpoints0 + 1 :, n_endpoints1 + 1 :], \
-        #                                         z0[:, n_endpoints0 + 1 :], z1[:, n_endpoints1 + 1 :])
+        # scores = sigmoid_log_double_softmax_kpts(
+        #     sim[:, n_endpoints0 + 1 :, n_endpoints1 + 1 :],
+        #     z0[:, n_endpoints0 + 1 :],
+        #     z1[:, n_endpoints1 + 1 :],
+        # )
         scores = sigmoid_log_double_softmax(sim, z0, z1)
         n2_lines0 = lines_junc_idx0.shape[1]
         n2_lines1 = lines_junc_idx1.shape[1]
@@ -414,10 +430,14 @@ class MatchAssignment(nn.Module):
         line_scores, raw_line_scores = None, None
 
         if n2_lines0 > 0 and n2_lines1 > 0:
-            line_scores, raw_line_scores = self.get_line_assignment(desc0[:, : n2_lines0, :], desc1[:, : n2_lines1, :],
-                                                                    lines_junc_idx0, lines_junc_idx1,
-                                                                    self.endp_matchability(desc0[:, : n2_lines0, :]), \
-                                                                    self.endp_matchability(desc1[:, : n2_lines1, :]))
+            line_scores, raw_line_scores = self.get_line_assignment(
+                desc0[:, :n2_lines0, :],
+                desc1[:, :n2_lines1, :],
+                lines_junc_idx0,
+                lines_junc_idx1,
+                self.endp_matchability(desc0[:, :n2_lines0, :]),
+                self.endp_matchability(desc1[:, :n2_lines1, :]),
+            )
 
         return scores, sim, line_scores, raw_line_scores
 
@@ -482,7 +502,10 @@ class LightGlueStick(BaseModel):
         "line_scores1",
     ]
 
-    url = "https://github.com/aubingazhib/LightGlueStick/releases/download/v1.0.0/lightgluestick.tar"
+    url = (
+        "https://github.com/aubingazhib/LightGlueStick/releases/download/"
+        "v1.0.0/lightgluestick.tar"
+    )
 
     def _init(self, conf) -> None:
         self.conf = conf = OmegaConf.merge(self.default_conf, conf)
@@ -504,9 +527,7 @@ class LightGlueStick(BaseModel):
         )
 
         self.log_assignment = nn.ModuleList([MatchAssignment(d) for _ in range(n)])
-        self.token_confidence = nn.ModuleList(
-            [TokenConfidence(d) for _ in range(n)]
-        )
+        self.token_confidence = nn.ModuleList([TokenConfidence(d) for _ in range(n)])
 
         self.register_buffer(
             "confidence_thresholds",
@@ -515,7 +536,11 @@ class LightGlueStick(BaseModel):
             ),
         )
 
-        self.eye_mask = torch.eye(self.conf.max_num_lines * 2, dtype=torch.float32).unsqueeze(0).to(DEVICE)
+        self.eye_mask = (
+            torch.eye(self.conf.max_num_lines * 2, dtype=torch.float32)
+            .unsqueeze(0)
+            .to(DEVICE)
+        )
         state_dict = None
 
         if conf.weights is not None:
@@ -526,19 +551,19 @@ class LightGlueStick(BaseModel):
             else:
                 # Download into default torch cache (~/.cache/torch/hub/checkpoints)
                 state_dict = torch.hub.load_state_dict_from_url(
-                    self.url,
-                    map_location="cpu"
+                    self.url, map_location="cpu"
                 )
         else:
             # No weights provided -> use default torch cache
             state_dict = torch.hub.load_state_dict_from_url(
-                self.url,
-                map_location="cpu"
+                self.url, map_location="cpu"
             )
 
         if state_dict:
             state_dict = state_dict["model"]
-            state_dict = {k[8:]: v for k, v in state_dict.items() if k.startswith("matcher.")}
+            state_dict = {
+                k[8:]: v for k, v in state_dict.items() if k.startswith("matcher.")
+            }
             self.load_state_dict(state_dict, strict=False)
 
     def compile(self, mode="reduce-overhead"):
@@ -566,18 +591,14 @@ class LightGlueStick(BaseModel):
         n_lines0, n_lines1 = data["lines0"].shape[1], data["lines1"].shape[1]
 
         pred = {}
-        
+
         if m == 0 or n == 0:
             # No detected keypoints nor lines
             pred["log_assignment"] = torch.zeros(
                 b, m, n, dtype=torch.float, device=device
             )
-            pred["matches0"] = torch.full(
-                (b, m), -1, device=device, dtype=torch.int64
-            )
-            pred["matches1"] = torch.full(
-                (b, n), -1, device=device, dtype=torch.int64
-            )
+            pred["matches0"] = torch.full((b, m), -1, device=device, dtype=torch.int64)
+            pred["matches1"] = torch.full((b, n), -1, device=device, dtype=torch.int64)
             pred["matching_scores0"] = torch.zeros(
                 (b, m), device=device, dtype=torch.float32
             )
@@ -664,12 +685,21 @@ class LightGlueStick(BaseModel):
         n_endpoints1 = lines_junc_idx1.max() + 1
 
         # pre-compute masks for LG-LMP
-        mask0 = create_mask(lines_junc_idx0, self.eye_mask, n_endpoints0).unsqueeze(1).bool()
-        mask1 = create_mask(lines_junc_idx1, self.eye_mask, n_endpoints1).unsqueeze(1).bool()
+        mask0 = (
+            create_mask(lines_junc_idx0, self.eye_mask, n_endpoints0)
+            .unsqueeze(1)
+            .bool()
+        )
+        mask1 = (
+            create_mask(lines_junc_idx1, self.eye_mask, n_endpoints1)
+            .unsqueeze(1)
+            .bool()
+        )
 
         for i in range(self.conf.n_layers):
-            desc0, desc1 = self.transformers[i](desc0, desc1, encoding0, encoding1, \
-                                                mask0, mask1)
+            desc0, desc1 = self.transformers[i](
+                desc0, desc1, encoding0, encoding1, mask0, mask1
+            )
 
             # only for eval
             if do_early_stop:
@@ -681,7 +711,7 @@ class LightGlueStick(BaseModel):
                 assert b == 1
                 scores0 = self.log_assignment[i].get_matchability(desc0)
 
-                scores0[0, : n_endpoints0] = 1.0
+                scores0[0, :n_endpoints0] = 1.0
                 prunemask0 = self.get_pruning_mask(token0, scores0, i)
                 keep0 = torch.where(prunemask0)[1]
                 ind0 = ind0.index_select(1, keep0)
@@ -690,7 +720,7 @@ class LightGlueStick(BaseModel):
                 prune0[:, ind0] += 1
                 scores1 = self.log_assignment[i].get_matchability(desc1)
 
-                scores1[0, : n_endpoints1] = 1.0
+                scores1[0, :n_endpoints1] = 1.0
                 prunemask1 = self.get_pruning_mask(token1, scores1, i)
                 keep1 = torch.where(prunemask1)[1]
                 ind1 = ind1.index_select(1, keep1)
@@ -699,7 +729,9 @@ class LightGlueStick(BaseModel):
                 prune1[:, ind1] += 1
 
         desc0, desc1 = desc0[..., :m, :], desc1[..., :n, :]
-        scores, _, line_scores, raw_line_scores = self.log_assignment[i](desc0, desc1, lines_junc_idx0, lines_junc_idx1)
+        scores, _, line_scores, raw_line_scores = self.log_assignment[i](
+            desc0, desc1, lines_junc_idx0, lines_junc_idx1
+        )
         m0, m1, mscores0, mscores1 = filter_matches(scores, self.conf.filter_threshold)
 
         if do_point_pruning:
@@ -724,11 +756,13 @@ class LightGlueStick(BaseModel):
             "log_assignment": scores,
             "prune0": prune0,
             "prune1": prune1,
-            "early_exit_layer_idx": i + 1
+            "early_exit_layer_idx": i + 1,
         }
 
         if n_lines0 > 0 and n_lines1 > 0:
-            m0_lines, m1_lines, mscores0_lines, mscores1_lines = filter_matches(line_scores, self.conf.filter_threshold)
+            m0_lines, m1_lines, mscores0_lines, mscores1_lines = filter_matches(
+                line_scores, self.conf.filter_threshold
+            )
             pred["line_log_assignment"] = line_scores
             pred["line_matches0"] = m0_lines
             pred["line_matches1"] = m1_lines
@@ -739,12 +773,8 @@ class LightGlueStick(BaseModel):
             line_scores = torch.zeros(
                 b, n_lines0, n_lines1, dtype=torch.float, device=device
             )
-            m0_lines = torch.full(
-                (b, n_lines0), -1, device=device, dtype=torch.int64
-            )
-            m1_lines = torch.full(
-                (b, n_lines1), -1, device=device, dtype=torch.int64
-            )
+            m0_lines = torch.full((b, n_lines0), -1, device=device, dtype=torch.int64)
+            m1_lines = torch.full((b, n_lines1), -1, device=device, dtype=torch.int64)
             mscores0_lines = torch.zeros(
                 (b, n_lines0), device=device, dtype=torch.float32
             )
@@ -763,7 +793,7 @@ class LightGlueStick(BaseModel):
         return np.clip(threshold, 0, 1)
 
     def get_pruning_mask(
-            self, confidences: torch.Tensor, scores: torch.Tensor, layer_index: int
+        self, confidences: torch.Tensor, scores: torch.Tensor, layer_index: int
     ) -> torch.Tensor:
         """mask points which should be removed"""
         keep = scores > (1 - self.conf.width_confidence)
@@ -772,11 +802,11 @@ class LightGlueStick(BaseModel):
         return keep
 
     def check_if_stop(
-            self,
-            confidences0: torch.Tensor,
-            confidences1: torch.Tensor,
-            layer_index: int,
-            num_points: int,
+        self,
+        confidences0: torch.Tensor,
+        confidences1: torch.Tensor,
+        layer_index: int,
+        num_points: int,
     ) -> torch.Tensor:
         """evaluate stopping condition"""
         confidences = torch.cat([confidences0, confidences1], -1)
@@ -789,7 +819,7 @@ class LightGlueStick(BaseModel):
             return self.pruning_keypoint_thresholds["flash"]
         else:
             return self.pruning_keypoint_thresholds[device.type]
-    
+
     def loss(self, pred, data):
         raise NotImplementedError()
 

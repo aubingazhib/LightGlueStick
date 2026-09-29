@@ -2,7 +2,6 @@
 
 <p align="center">
   <h1 align="center"><ins><i>LightGlueStick</i></ins><br><i>Fast and Robust Joint Point-Line Matching</i></h1>
-  <h3 align="center"><i>Accepted at ICCVW 2025</i></h3>
   <p align="center">
     <a href="https://arxiv.org/abs/2510.16438" target="_blank">
       <img src="https://img.shields.io/badge/arXiv-2510.16438-b31b1b.svg?logo=arxiv&logoColor=white" alt="arXiv link">
@@ -37,6 +36,13 @@ You can match features with:
 ```bash
 python -m lightgluestick.run -img1 assets/img1.jpg -img2 assets/img2.jpg
 ```
+
+To enable depth adaptivity, simply provide a depth confidence value:
+```bash
+python -m lightgluestick.run -img1 assets/img1.jpg -img2 assets/img2.jpg --depth_confidence 0.95
+```
+When depth adaptivity is enabled, the model will perform an early exit based on the specified confidence threshold and print the corresponding early exit layer.
+
 ## Training 🏋️
 The training code is available in a separate repository, [GlueFactory](https://github.com/cvg/glue-factory). Within GlueFactory, you can not only train LightGlueStick, but also other deep matchers such as [LightGlue](https://github.com/cvg/LightGlue) and [GlueStick](https://github.com/cvg/GlueStick), use multiple feature extractors, line extractors, robust estimators, as well as run evaluations on multiple benchmarks.
 

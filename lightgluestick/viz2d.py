@@ -6,7 +6,6 @@
 """
 
 import matplotlib
-import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -160,6 +159,7 @@ def plot_matches(kpts0, kpts1, color=None, lw=1.5, ps=4, a=1.0, labels=None, axe
             s=ps,
             label=None if labels is None or len(labels) == 0 else labels[1],
         )
+
 
 def plot_lines(
     lines,
